@@ -98,7 +98,10 @@
     border-color: transparent transparent transparent var(--accent-ink);
   }
   .foot { padding: 8px 14px 12px; font-size: 14px; }
+  .foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
   .foot a { color: var(--accent); }
+  .replay { border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; padding: 4px 12px; border-radius: 999px; cursor: pointer; }
+  .replay:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   .empty { max-width: 560px; margin: 56px auto; padding: 0 20px; text-align: center; color: var(--muted); }
   .empty strong { display: block; color: var(--ink); font-size: 20px; margin-bottom: 6px; }
   @media (max-width: 520px) { .stage { height: 560px; } }
@@ -154,26 +157,34 @@
     var stage = el("div", "stage");
     var code = String(item.shortCode || "");
     var ok = /^[A-Za-z0-9_-]+$/.test(code);
+    function loadPlayer() {
+      var f = document.createElement("iframe");
+      f.src = "https://www.instagram.com/p/" + code + "/embed/";
+      f.title = "Reel von " + (item.username || "");
+      f.allow = "autoplay; encrypted-media; picture-in-picture";
+      f.setAttribute("allowfullscreen", "");
+      stage.replaceChildren(f);
+      if (replay) replay.hidden = false;
+    }
+    var replay = null;
     if (ok) {
       var btn = el("button", "play");
       btn.type = "button";
       btn.setAttribute("aria-label", "Video von " + (item.username || "") + " abspielen");
       btn.appendChild(el("span", "disc"));
       btn.appendChild(el("span", "", "Video laden"));
-      btn.addEventListener("click", function () {
-        var f = document.createElement("iframe");
-        f.src = "https://www.instagram.com/p/" + code + "/embed/";
-        f.title = "Reel von " + (item.username || "");
-        f.allow = "autoplay; encrypted-media; picture-in-picture";
-        f.setAttribute("allowfullscreen", "");
-        stage.replaceChildren(f);
-      });
+      btn.addEventListener("click", function () { loadPlayer(); });
       stage.appendChild(btn);
     }
     card.appendChild(stage);
 
     if (ok) {
       var foot = el("div", "foot");
+      replay = el("button", "replay", "Nochmal abspielen");
+      replay.type = "button";
+      replay.hidden = true;
+      replay.addEventListener("click", function () { loadPlayer(); });
+      foot.appendChild(replay);
       var a = el("a", "", "Bei Instagram öffnen");
       a.href = "https://www.instagram.com/p/" + code + "/";
       a.target = "_blank";

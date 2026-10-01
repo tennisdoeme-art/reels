@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Reels-Übersicht</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef2f5;
+    --surface: #ffffff;
+    --ink: #11222f;
+    --muted: #5a6b78;
+    --line: #d3dce3;
+    --accent: #1d6f9f;
+    --accent-ink: #ffffff;
+    --tile: #dfe7ed;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1a24;
+      --surface: #14263a;
+      --ink: #e8f0f5;
+      --muted: #94a8b6;
+      --line: #25405a;
+      --accent: #6cb8e0;
+      --accent-ink: #0d1a24;
+      --tile: #1b3249;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1a24;
+    --surface: #14263a;
+    --ink: #e8f0f5;
+    --muted: #94a8b6;
+    --line: #25405a;
+    --accent: #6cb8e0;
+    --accent-ink: #0d1a24;
+    --tile: #1b3249;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  header { max-width: 1280px; margin: 0 auto; padding: 28px 20px 8px; }
+  h1 {
+    margin: 0;
+    font-family: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+    font-weight: 700;
+    font-size: clamp(34px, 6vw, 56px);
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+  }
+  .count { margin: 6px 0 0; color: var(--muted); }
+  .filters {
+    max-width: 1280px; margin: 0 auto; padding: 14px 20px 6px;
+    display: flex; gap: 8px; overflow-x: auto; scrollbar-width: thin;
+  }
+  .chip {
+    flex: 0 0 auto; border: 1px solid var(--line); background: var(--surface);
+    color: var(--ink); font: inherit; font-size: 14px; padding: 6px 14px;
+    border-radius: 999px; cursor: pointer;
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .chip:focus-visible, .play:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  main { max-width: 1280px; margin: 0 auto; padding: 12px 20px 48px; }
+  .day {
+    font-family: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+    font-weight: 600; font-size: 22px; margin: 26px 0 10px;
+  }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+  .meta { padding: 10px 14px 8px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .who { font-weight: 600; word-break: break-word; }
+  .when { color: var(--muted); font-size: 14px; white-space: nowrap; }
+  .stage { position: relative; height: 600px; background: var(--tile); }
+  .stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
+  .play {
+    position: absolute; inset: 0; width: 100%; border: 0; background: transparent;
+    color: var(--ink); font: inherit; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  }
+  .play .disc { width: 64px; height: 64px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; }
+  .play .disc::after {
+    content: ""; margin-left: 5px; border-style: solid; border-width: 11px 0 11px 18px;
+    border-color: transparent transparent transparent var(--accent-ink);
+  }
+  .foot { padding: 8px 14px 12px; font-size: 14px; }
+  .foot a { color: var(--accent); }
+  .empty { max-width: 560px; margin: 56px auto; padding: 0 20px; text-align: center; color: var(--muted); }
+  .empty strong { display: block; color: var(--ink); font-size: 20px; margin-bottom: 6px; }
+  @media (max-width: 520px) { .stage { height: 560px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Neue Reels</h1>
+  <p class="count" id="count">Lädt …</p>
+</header>
+<nav class="filters" id="filters" aria-label="Nach Profil filtern"></nav>
+<main id="main"></main>
+
+<script>
+(function () {
+  // Pfad des Projekts auf GitHub (Benutzer/Projekt)
+  var REPO = "tennisdoeme-art/reels";
+  var MAX_FILES = 30; // so viele der neuesten Lauf-Dateien werden gelesen
+
+  var items = [];
+  var activeProfile = "";
+  var main = document.getElementById("main");
+  var filters = document.getElementById("filters");
+  var countEl = document.getElementById("count");
+
+  var dayFmt = new Intl.DateTimeFormat("de-CH", { weekday: "long", day: "numeric", month: "long" });
+  var timeFmt = new Intl.DateTimeFormat("de-CH", { hour: "2-digit", minute: "2-digit" });
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+
+  function showEmpty(title, body) {
+    main.replaceChildren();
+    filters.replaceChildren();
+    var box = el("div", "empty");
+    box.appendChild(el("strong", "", title));
+    box.appendChild(el("span", "", body));
+    main.appendChild(box);
+  }
+
+  function makeCard(item) {
+    var card = el("article", "card");
+    var meta = el("div", "meta");
+    meta.appendChild(el("span", "who", item.username || "unbekannt"));
+    var d = new Date(item.timestamp);
+    meta.appendChild(el("span", "when", isNaN(d) ? "" : timeFmt.format(d) + " Uhr"));
+    card.appendChild(meta);
+
+    var stage = el("div", "stage");
+    var code = String(item.shortCode || "");
+    var ok = /^[A-Za-z0-9_-]+$/.test(code);
+    if (ok) {
+      var btn = el("button", "play");
+      btn.type = "button";
+      btn.setAttribute("aria-label", "Video von " + (item.username || "") + " abspielen");
+      btn.appendChild(el("span", "disc"));
+      btn.appendChild(el("span", "", "Video laden"));
+      btn.addEventListener("click", function () {
+        var f = document.createElement("iframe");
+        f.src = "https://www.instagram.com/p/" + code + "/embed/";
+        f.title = "Reel von " + (item.username || "");
+        f.allow = "autoplay; encrypted-media; picture-in-picture";
+        f.setAttribute("allowfullscreen", "");
+        stage.replaceChildren(f);
+      });
+      stage.appendChild(btn);
+    }
+    card.appendChild(stage);
+
+    if (ok) {
+      var foot = el("div", "foot");
+      var a = el("a", "", "Bei Instagram öffnen");
+      a.href = "https://www.instagram.com/p/" + code + "/";
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      foot.appendChild(a);
+      card.appendChild(foot);
+    }
+    return card;
+  }
+
+  function render() {
+    var profiles = {};
+    items.forEach(function (i) { if (i.username) profiles[i.username] = (profiles[i.username] || 0) + 1; });
+    var names = Object.keys(profiles).sort(function (a, b) { return a.localeCompare(b); });
+    if (activeProfile && !profiles[activeProfile]) activeProfile = "";
+
+    filters.replaceChildren();
+    if (names.length > 1) {
+      var all = el("button", "chip", "Alle (" + items.length + ")");
+      all.type = "button";
+      all.setAttribute("aria-pressed", activeProfile === "" ? "true" : "false");
+      all.addEventListener("click", function () { activeProfile = ""; render(); });
+      filters.appendChild(all);
+      names.forEach(function (n) {
+        var c = el("button", "chip", n + " (" + profiles[n] + ")");
+        c.type = "button";
+        c.setAttribute("aria-pressed", activeProfile === n ? "true" : "false");
+        c.addEventListener("click", function () { activeProfile = n; render(); });
+        filters.appendChild(c);
+      });
+    }
+
+    var shown = items.filter(function (i) { return !activeProfile || i.username === activeProfile; });
+    countEl.textContent = shown.length + (shown.length === 1 ? " Video" : " Videos") +
+      " von " + (activeProfile ? "1 Profil" : names.length + (names.length === 1 ? " Profil" : " Profilen"));
+
+    main.replaceChildren();
+    var lastDay = "";
+    var grid = null;
+    shown.forEach(function (item) {
+      var d = new Date(item.timestamp);
+      var day = isNaN(d) ? "Ohne Datum" : dayFmt.format(d);
+      if (day !== lastDay) {
+        main.appendChild(el("h2", "day", day));
+        grid = el("div", "grid");
+        main.appendChild(grid);
+        lastDay = day;
+      }
+      grid.appendChild(makeCard(item));
+    });
+  }
+
+  async function load() {
+    // Liste der Lauf-Dateien im Ordner data lesen
+    var res = await fetch("https://api.github.com/repos/" + REPO + "/contents/data");
+    if (res.status === 404) return [];
+    if (!res.ok) throw new Error("Liste konnte nicht gelesen werden (" + res.status + ")");
+    var list = await res.json();
+    var files = list
+      .filter(function (f) { return f.type === "file" && /\.json$/i.test(f.name); })
+      .sort(function (a, b) { return b.name.localeCompare(a.name); })
+      .slice(0, MAX_FILES);
+
+    var parts = await Promise.all(files.map(function (f) {
+      return fetch("data/" + encodeURIComponent(f.name), { cache: "no-cache" })
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .catch(function () { return []; });
+    }));
+
+    var seen = {};
+    var all = [];
+    parts.forEach(function (arr) {
+      if (!Array.isArray(arr)) return;
+      arr.forEach(function (r) {
+        if (!r || !r.shortCode || seen[r.shortCode]) return;
+        seen[r.shortCode] = true;
+        all.push(r);
+      });
+    });
+    all.sort(function (a, b) { return new Date(b.timestamp) - new Date(a.timestamp); });
+    return all;
+  }
+
+  load().then(function (all) {
+    items = all;
+    if (items.length === 0) {
+      countEl.textContent = "Noch keine Videos";
+      showEmpty("Noch keine Videos", "Sobald der nächste Lauf neue Reels findet, erscheinen sie hier.");
+    } else {
+      render();
+    }
+  }).catch(function (e) {
+    countEl.textContent = "";
+    showEmpty("Die Videos lassen sich nicht laden", "Bitte lade die Seite in ein paar Minuten neu. (" + e.message + ")");
+  });
+})();
+</script>
+</body>
+</html>
